@@ -38,17 +38,9 @@ Built using Streamlit:
 Alert System
 - Email notifications sent via SMTP if a transaction is predicted as fraudulent
 
-Contributors
-- Sabahath Taj Z
-- Riya Yadav
-
 Future Scope
 - AI-powered risk scoring system
 - Blockchain-based transaction tracking
 - Mobile app integration for instant fraud alerts
-
-Dataset
-- Kaggle: Credit Card Fraud Detection Dataset 2023
-- Balanced dataset: 50% fraud, 50% legit
 
 Developed during our internship at ZIDIO
