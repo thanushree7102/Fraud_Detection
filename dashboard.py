@@ -1,41 +1,65 @@
-import streamlit as st
-import pandas as pd
+"""Streamlit dashboard.  Run with:  streamlit run dashboard.py"""
 import json
-import time
+
 import altair as alt
+import pandas as pd
+import streamlit as st
+
+from config import DASHBOARD_DATA_PATH
 
 st.set_page_config(page_title="Fraud Detection Dashboard", layout="wide")
 st.title("Real-Time Fraud Detection Dashboard")
 
-placeholder = st.empty()
 
-while True:
+def load_data() -> list:
     try:
-        with open('dashboard_data.json', 'r') as f:
-            data = json.load(f)
-    except FileNotFoundError:
-        data = []
-        st.info("No transactions yet...")
+        with open(DASHBOARD_DATA_PATH) as f:
+            return json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return []
 
-    if data:
-        df = pd.DataFrame(data)
-        
-        with placeholder.container():
-            col1, col2, col3 = st.columns(3)
-            col1.metric("Total Transactions", len(df))
-            col2.metric("Fraudulent Transactions", df['isFraud'].sum())
-            col3.metric("Avg Fraud Probability", f"{df['fraud_probability'].mean():.2%}")
-            
-            st.subheader("Recent Transactions")
-            st.dataframe(df[['step', 'type', 'amount', 'isFraud', 'fraud_probability']][::-1].head(10))
-            
-            # Bar chart for fraud counts
-            fraud_counts = df.groupby('isFraud').size().reset_index(name='Count')
-            chart = alt.Chart(fraud_counts).mark_bar().encode(
-                x=alt.X('isFraud:N', title='Fraud Status (0 = No, 1 = Yes)'),
-                y=alt.Y('Count:Q', title='Number of Transactions'),
-                color=alt.Color('isFraud:N', title='Fraud Status')
-            ).properties(title="Fraud vs Non-Fraud Transactions")
-            st.altair_chart(chart, use_container_width=True)
-    
-    time.sleep(3)  # Refresh every 3 seconds
+
+# A fragment re-runs on its own every 3 seconds, without blocking the app
+# in a `while True` loop like the original did.
+@st.fragment(run_every=3)
+def live_view() -> None:
+    data = load_data()
+    if not data:
+        st.info("No transactions yet. Start consumer.py and producer.py.")
+        return
+
+    df = pd.DataFrame(data)
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Total Transactions", len(df))
+    c2.metric("Fraudulent Transactions", int(df["isFraud"].sum()))
+    c3.metric("Avg Fraud Probability", f"{df['fraud_probability'].mean():.2%}")
+
+    st.subheader("Recent Transactions")
+    st.dataframe(
+        df[["step", "type", "amount", "isFraud", "fraud_probability"]][::-1].head(10)
+    )
+
+    counts = (
+        df.assign(status=df["isFraud"].map({0: "Legit", 1: "Fraud"}))
+        .groupby("status")
+        .size()
+        .reset_index(name="Count")
+    )
+    chart = (
+        alt.Chart(counts)
+        .mark_bar()
+        .encode(
+            x=alt.X("status:N", title="Status"),
+            y=alt.Y("Count:Q", title="Number of Transactions"),
+            color=alt.Color(
+                "status:N",
+                scale=alt.Scale(domain=["Legit", "Fraud"], range=["#4c78a8", "#e45756"]),
+                legend=None,
+            ),
+        )
+        .properties(title="Fraud vs Non-Fraud Transactions", width="container")
+    )
+    st.altair_chart(chart)
+
+
+live_view()

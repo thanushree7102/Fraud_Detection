@@ -1,0 +1,6 @@
+pandas
+numpy
+scikit-learn
+kafka-python>=2.1
+streamlit>=1.37
+altair

@@ -1,0 +1,7 @@
+# Single-node Kafka (no ZooKeeper) listening on localhost:9092
+services:
+  kafka:
+    image: apache/kafka:3.9.0
+    container_name: fraud-kafka
+    ports:
+      - "9092:9092"
